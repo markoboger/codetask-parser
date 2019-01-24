@@ -1,5 +1,5 @@
 name := "Code-Task Parser"
-organization := "de.htwg-konstanz"
+organization := "de.htwg"
 
 version := "0.1"
 
