@@ -1,7 +1,5 @@
 package de.htwg.parser
 
-// import de.htwg_konstanz.ar431ott.errors.ParsingError
-
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.RegexParsers
 import scala.util.parsing.input.CharArrayReader
