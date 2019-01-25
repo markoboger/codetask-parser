@@ -1,0 +1,24 @@
+version: '3.3'
+
+services:
+    play:
+        build: ./project
+        ports:
+            - 9000:9000
+        volumes:
+                - ./project:/project
+        command: bash -c "tail -F /dev/null"
+        working_dir: /project
+    
+    ngrok:
+        image: alpine:latest
+        ports:
+            - 4040:4040
+        volumes:
+            - ./ngrok:/usr/local/bin/ngrok
+            - .:/tmp/
+        command: sh -c "ngrok authtoken ${AUTH_TOKEN} && ngrok http ${SERVER}:${SERVER_PORT} > /tmp/ngrok_log"
+        depends_on:
+            - play
+        environment:
+            - HOME=/root
