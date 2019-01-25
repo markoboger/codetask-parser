@@ -55,7 +55,7 @@ class Parser extends RegexParsers {
   // endregion
 
   // description combining strings with a + sign
-  private[parser] def description: Parser[String] = "\\s*\\(\\s*".r ~> string ~ opt(rep1("\\s*\\+\\s*".r ~> string)) <~ "\\s*\\)".r ^^ {
+  private[parser] def description: Parser[String] = "\\s*\\(\\s*".r ~> string ~ opt(rep1("\\s*\\+\\s*".r ~> commit(string))) <~ "\\s*\\)".r ^^ {
     case first ~ Some(text) => first + text.mkString
     case text ~ None => text
   }

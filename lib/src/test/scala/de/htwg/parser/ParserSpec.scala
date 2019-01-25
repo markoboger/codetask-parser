@@ -213,4 +213,32 @@ class ParserSpec extends WordSpec {
       assert(!parsed.successful)
     }
   }
+
+  "A description" should {
+    "be parsed" in {
+      val parsed = parser.description.apply("(\"description\")")
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == "description")
+    }
+    "be parsed as combined" in {
+      val parsed = parser.description.apply("(\"description\" + \" additional\")")
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == "description additional")
+    }
+    "not be parsed without an opening bracket" in {
+      val parsed = parser.description.apply("\"description\")")
+      assert(!parsed.successful)
+      assert(parsed.asInstanceOf[parser.NoSuccess].msg.contains("\\s*\\(\\s*"))
+    }
+    "not be parsed without a closing bracket" in {
+      val parsed = parser.description.apply("(\"description\"")
+      assert(!parsed.successful)
+      assert(parsed.asInstanceOf[parser.NoSuccess].msg.contains("\\s*\\)"))
+    }
+    "not be parsed without a following string, if a + is present" in {
+      val parsed = parser.description.apply("(\"description\" + )")
+      assert(!parsed.successful)
+      assert(parsed.asInstanceOf[parser.NoSuccess].msg == "'\"' expected but ')' found")
+    }
+  }
 }
