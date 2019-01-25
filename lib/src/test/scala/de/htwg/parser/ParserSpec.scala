@@ -9,6 +9,7 @@ class ParserSpec extends WordSpec {
   implicit def textToInput(text: String): Reader[Char] =
     new CharArrayReader(text.toCharArray, 0).asInstanceOf[Reader[Char]]
 
+  // region Line tests
   "An empty line" should {
     "be empty" in {
       val parsed = parser._line.apply("")
@@ -50,6 +51,166 @@ class ParserSpec extends WordSpec {
       val parsed = parser._line("until".r).apply("until value\n")
       assert(!parsed.successful)
       assert(parsed.asInstanceOf[parser.NoSuccess].msg == "Reached the expected line: until")
+    }
+  }
+  // endregion
+
+  // region Quote tests
+  "A quoted string" should {
+    "return a string with single quotes escaped" in {
+      val parsed = parser.quotedString.apply("\"value\"")
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == "\"value\"")
+    }
+    "return a string with triple quotes escaped" in {
+      val parsed = parser.quotedString.apply("\"\"\"value\"\"\"")
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == "\"\"\"value\"\"\"")
+    }
+    "return a string with no quotes instead of single quotes" in {
+      val parsed = parser.string.apply("\"value\"")
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == "value")
+    }
+    "return a string with no quotes instead of triple quotes" in {
+      val parsed = parser.string.apply("\"\"\"value\"\"\"")
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == "value")
+    }
+  }
+
+  "A quoted string with an escaped quote" should {
+    "return a string with single quotes escaped and double escape the escaped quote" in {
+      val parsed = parser.quotedString.apply("\"value\\\"\"")
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == "\"value\\\"\"")
+    }
+    "return a string with triple quotes escaped and an fourth quote" in {
+      val parsed = parser.quotedString.apply("\"\"\"value\"\"\"\"")
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == "\"\"\"value\"\"\"\"")
+    }
+    "return a string with no quotes and escape the escaped quote" in {
+      val parsed = parser.string.apply("\"value\\\"\"")
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == "value\"")
+    }
+    "return a string with no quotes and a quote" in {
+      val parsed = parser.string.apply("\"\"\"value\"\"\"\"")
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == "value\"")
+    }
+  }
+
+  "A wrong amount of qoutes" should {
+    "result in an error" in {
+      val parsed = parser.quotedString.apply("\"value")
+      assert(!parsed.successful)
+      assert(parsed.asInstanceOf[parser.NoSuccess].msg == "String is not closed")
+    }
+    "result in a same error" in {
+      val parsed = parser.quotedString.apply("\"\"\"value\"\"")
+      assert(!parsed.successful)
+      assert(parsed.asInstanceOf[parser.NoSuccess].msg == "String is not closed")
+    }
+    "result in a same error as the first test case" in {
+      val parsed = parser.string.apply("\"value")
+      assert(!parsed.successful)
+      assert(parsed.asInstanceOf[parser.NoSuccess].msg == "String is not closed")
+    }
+    "result in a same error as the second test case" in {
+      val parsed = parser.string.apply("\"\"\"value\"\"")
+      assert(!parsed.successful)
+      assert(parsed.asInstanceOf[parser.NoSuccess].msg == "String is not closed")
+    }
+  }
+  // endregion
+
+  "A comment line" should {
+    "contain the comment line" in {
+      val parsed = parser.comment.apply("//value")
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == "//value")
+    }
+    "return an error" in {
+      val parsed = parser.comment.apply("/value")
+      assert(!parsed.successful)
+    }
+  }
+
+  "A curly bracket" should {
+    "be parsed" in {
+      val parsed = parser.curBrackets.apply(
+        s"""{
+          |// comment
+          |line
+          |{}
+          |"string"
+          |${"\""}""string""${"\""}
+          |()
+          |}""".stripMargin)
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == s"""{
+                                       |// comment
+                                       |line
+                                       |{}
+                                       |"string"
+                                       |${"\""}""string""${"\""}
+                                       |()
+                                       |}""".stripMargin)
+    }
+    "parse only the first closing bracket" in {
+      val parsed = parser.curBrackets.apply(
+        """{
+          |}
+          |}""".stripMargin)
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == "{\n}")
+    }
+    "not be parsed, because there is no closing bracket" in {
+      val parsed = parser.curBrackets.apply(
+        """{
+          |{
+          |}""".stripMargin)
+      assert(!parsed.successful)
+    }
+  }
+
+  "A bracket" should {
+    "be parsed" in {
+      val parsed = parser.brackets.apply(
+        s"""(
+          |// comment
+          |line
+          |{}
+          |"string"
+          |${"\""}""string""${"\""}
+          |()
+          |)""".stripMargin)
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == s"""(
+                                       |// comment
+                                       |line
+                                       |{}
+                                       |"string"
+                                       |${"\""}""string""${"\""}
+                                       |()
+                                       |)""".stripMargin)
+    }
+    "parse only the first closing bracket" in {
+      val parsed = parser.brackets.apply(
+        """(
+          |)
+          |)""".stripMargin)
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == "(\n)")
+    }
+    "not be parsed, because there is no closing bracket" in {
+      val parsed = parser.brackets.apply(
+        """(
+          |(
+          |)""".stripMargin)
+      assert(!parsed.successful)
     }
   }
 }
