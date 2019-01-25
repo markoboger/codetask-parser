@@ -5,16 +5,20 @@ ngrok_log
 lib/.idea
 project/.idea
 
-project/dist
-project/target
-project/lib_managed
-project/src_managed
-project/project/boot
-project/project/plugins/project
-project/.history
-project/.cache
-project/.lib
+project/bin/
+/db
+project/lib/
+project/logs/
+project/modules
+project/project/project
 project/project/target
+project/target
+project/tmp/
+project/test-result
+project/server.pid
+project/*.eml
+project/dist/
+project/.cache
 
 lib/dist
 lib/target
