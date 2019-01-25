@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "target": "ES5",
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "sourceRoot": "./scripts/",
+        "rootDir": "./scripts/",
+        "outFile": "./public/javascripts/main.js",
+        "sourceMap": true
+    }
+}
