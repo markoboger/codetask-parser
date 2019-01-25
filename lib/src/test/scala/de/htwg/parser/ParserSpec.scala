@@ -304,6 +304,13 @@ class ParserSpec extends WordSpec {
       assert(!parsed.successful)
     }
   }
+  "An assert" should {
+    "not be parsed" in {
+      val parsed = parser.assert.apply("true)")
+      assert(!parsed.successful)
+    }
+  }
   // endregion
+
   // endregion
 }
