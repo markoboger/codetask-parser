@@ -312,5 +312,164 @@ class ParserSpec extends WordSpec {
   }
   // endregion
 
+  "A 'should be'" should {
+    "be parsed" in {
+      val parsed = parser.shouldBe.apply("(foo)")
+      assert(parsed.successful)
+      assert(parsed.getOrElse(("", "")) == ("should be(__)", "foo"))
+    }
+    "not be parsed if one of the brackets is missing" in {
+      val openParsed = parser.shouldBe.apply("foo)")
+      assert(!openParsed.successful)
+
+      val closeParsed = parser.shouldBe.apply("(foo")
+      assert(!closeParsed.successful)
+    }
+  }
+
+  "Koan tasks" should {
+    "be parsed" in {
+      val parsed = parser.koanTasks.apply(
+        """
+          |some line
+          |assert(true)
+          |assert(false)
+          |assert("Foo" == Bar)
+          |assert("Foo" === "Bar")
+          |assert("Foo" eq Bar)
+          | assert("Foo".eq(Bar))
+          |Foo should be("Bar")
+          |case class Foo extends Bar("foo")
+        |""".stripMargin)
+      assert(parsed.successful)
+      assert(parsed.getOrElse(("", "")) ==
+        ("""
+          |some line
+          |assert(__)
+          |assert(__)
+          |assert("Foo" == __)
+          |assert("Foo" === __)
+          |assert("Foo" eq __)
+          |assert("Foo".eq(__))
+          |Foo should be(__)
+          |case class Foo extends Bar("foo")
+          |""".stripMargin, List("true", "false", "Bar", "\"Bar\"", "Bar", "Bar", "\"Bar\"")))
+    }
+    "be parsed if an assert contains a message" in {
+      val parsed = parser.koanTasks.apply("""assert(true, "Foo")""".stripMargin)
+      assert(parsed.successful)
+      assert(parsed.getOrElse(("", "")) == ("assert(__, \"Foo\")", List("true")))
+    }
+    "not be parsed if an assert should contain a message, but it don't" in {
+      val parsed = parser.koanTasks.apply("""assert(true, )""".stripMargin)
+      assert(!parsed.successful)
+    }
+    "not be parsed if a should be is wrong" in {
+      val parsed = parser.koanTasks.apply("should be foo")
+      assert(!parsed.successful)
+    }
+    "not be parsed if an assert is wrong" in {
+      val parsed = parser.koanTasks.apply("assert foo")
+      assert(!parsed.successful)
+    }
+  }
+
+  "A koan body" should {
+    "not be parsed if there is no opening bracket" in {
+      val parsed = parser.koanBody.apply("}")
+      assert(!parsed.successful)
+    }
+    "not be parsed if there is no closing bracket" in {
+      val parsed = parser.koanBody.apply("{ foo")
+      assert(!parsed.successful)
+    }
+    "not be parsed if it not starting with a curly bracket" in {
+      val parsed = parser.koanBody.apply("foo { bar }")
+      assert(!parsed.successful)
+    }
+  }
+
+  "A parsed koan" should {
+    "return a Koan Object" in {
+      val parsed = parser.koan.apply("(\"description\") { code }")
+      assert(parsed.successful)
+      assert(parsed.getOrElse("").isInstanceOf[de.htwg.parser.utils.Koan])
+    }
+  }
+  // endregion
+
+  // region Video
+  "A video body" should {
+    "be parsed" in {
+      val parsed = parser.videoBody.apply(""""first", "second"""")
+      assert(parsed.successful)
+      assert(parsed.getOrElse(("", "")) == ("first", "second"))
+    }
+    "not be parsed if only one parameter is given" in {
+      val parsed = parser.videoBody.apply(""""first"""")
+      assert(!parsed.successful)
+    }
+    "not be parsed if first parameter is not a string" in {
+      val parsed = parser.videoBody.apply("""first, "second"""")
+      assert(!parsed.successful)
+    }
+    "not be parsed if second parameter is not a string" in {
+      val parsed = parser.videoBody.apply(""""first", second""")
+      assert(!parsed.successful)
+    }
+  }
+  "A video" should {
+    "return a Video Object" in {
+      val parsed = parser.video.apply("""("first", "second")""")
+      assert(parsed.successful)
+      assert(parsed.getOrElse("").isInstanceOf[de.htwg.parser.utils.Video])
+    }
+    "not be parsed if parameter brackets are missing" in {
+      val openParsed = parser.video.apply(""""first", "second")""")
+      assert(!openParsed.successful)
+      val closeParsed = parser.video.apply("""("first", "second"""")
+      assert(!closeParsed.successful)
+    }
+  }
+  // endregion
+
+  // region CodeTask
+  "A code task solve" should {
+    "be parsed" in {
+      val parsed = parser.codetaskSolve.apply(
+        """
+          |solve line
+          |//endsolve
+        """.stripMargin)
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == List("\n", "solve line\n"))
+    }
+    "not be parsed if there is no endsolve" in {
+      val parsed = parser.codetaskSolve.apply(
+        """
+          |solve line
+        """.stripMargin)
+      assert(!parsed.successful)
+    }
+  }
+
+  "A code task test" should {
+    "be parsed" in {
+      val parsed = parser.codetaskTest.apply(
+        """
+          |test line
+          |//endtest
+        """.stripMargin)
+      assert(parsed.successful)
+      assert(parsed.getOrElse("") == List("\n", "test line\n"))
+    }
+    "not be parsed if there is no endtest" in {
+      val parsed = parser.codetaskTest.apply(
+        """
+          |test line
+        """.stripMargin)
+      assert(!parsed.successful)
+    }
+  }
   // endregion
 }

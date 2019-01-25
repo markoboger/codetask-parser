@@ -8,7 +8,7 @@ import de.htwg.parser.utils._
 import de.htwg.parser.error.ParsingError
 
 
-class Parser extends RegexParsers {
+class Parser(val skipCodeTask: Boolean = true) extends RegexParsers {
   override val skipWhitespace = false
   implicit def textToInput(text: String): Input = new CharArrayReader(text.toCharArray, 0).asInstanceOf[Input]
 
@@ -84,7 +84,7 @@ class Parser extends RegexParsers {
 
   private[parser] def shouldBe: Parser[(String, String)] = "(" ~> bracketsContent <~ ")" ^^ { v => ("should be(__)", v) }
   private[parser] def koanTasks: Parser[(String, List[String])] = rep1(
-    "assert\\s*".r ~> commit(assert) ~ opt("\\s*,\\s*".r ~> quotedString) <~ ")" ^^ { assertString } |
+    "assert\\s*".r ~> commit(assert) ~ opt("\\s*,\\s*".r ~> commit(quotedString)) <~ ")" ^^ { assertString } |
       _line("(\\{|\\(|\"|\\}|should\\s+be|assert)".r) |
       "should\\s+be\\s*".r ~> commit(shouldBe) |
       curBrackets | brackets | quotedString
@@ -115,30 +115,28 @@ class Parser extends RegexParsers {
   private[parser] def codetaskSolve: Parser[List[String]] = rep(_line("\\/\\/endsolve".r)) <~ "\\/\\/endsolve\\s*".r
   private[parser] def codetaskTest: Parser[List[String]] = rep(_line("\\/\\/endtest".r)) <~ "\\/\\/endtest\\s*".r
 
-  private[parser] def codetaskBracketsContent: Parser[String] = rep(comment | _line("[\\{\\(\"\\)]".r) | codetaskCurBracket | codetaskBrackets | quotedString) ^^ ( _.mkString )
+  private[parser] def codetaskBracketsContent: Parser[String] = rep(comment | _line("[\\{\\(\"\\)]".r) | codetaskBody | codetaskBrackets | quotedString) ^^ ( _.mkString )
   private[parser] def codetaskBrackets: Parser[String] = "(" ~> codetaskBracketsContent <~ ")" ^^ { v => s"(${v})" }
   private[parser] def codetaskCurBracketsContent: Parser[String] = rep(
     "\\s*\\/\\/solve".r ~> commit(codetaskSolve) ^^^ { "//todo\\n" } |
       "\\s*\\/\\/test".r ~> commit(codetaskTest) ^^^ { "" } |
-      comment | _line("(\\{|\\(|\"|\\})".r) | codetaskCurBracket | codetaskBrackets | quotedString
+      comment | _line("(\\{|\\(|\"|\\})".r) | codetaskBody | codetaskBrackets | quotedString
   ) ^^ ( _.mkString )
-  private[parser] def codetaskCurBracket: Parser[String] = "{" ~> codetaskCurBracketsContent <~ "}" ^^ { v => s"{${v}}" }
+  private[parser] def codetaskBody: Parser[String] = "\\s*\\{".r ~> codetaskCurBracketsContent <~ "}" ^^ { v => s"{${v}}" }
 
-  private[parser] def codetaskTasks: Parser[String] = rep(
-    "\\s*\\/\\/solve".r ~> commit(codetaskSolve) ^^^ { "//todo\\n" } |
-      "\\s*\\/\\/test".r ~> commit(codetaskTest) ^^^ { "" } |
-      _line("(\\{|\\(|\"|\\})".r) | codetaskCurBracket | brackets | quotedString
-  ) ^^ { _.mkString }
-  private[parser] def codetaskBody: Parser[String] = "\\s*\\{".r ~> codetaskTasks <~ "}"
   private[parser] def codetask: Parser[CodeTask] = description ~ codetaskBody ^^ {
     case desc ~ code => CodeTask(CodeTaskData(desc, code))
+  }
+  private[parser] def codetaskDecider: Parser[Any] = if (skipCodeTask) { codetask ^^^ {""}
+  } else {
+    commit(codetask)
   }
   //endregion
 
   private[parser] def tasks: Parser[List[Task]] = "\\s*\\{".r ~> rep(
     "\\s*koan".r ~> commit(koan) |
       "\\s*video".r ~> commit(video) |
-      "\\s*codetask".r ~> commit(codetask) |
+      "\\s*codetask".r ~> codetaskDecider |
       comment | _line("[\\{\\(\"\\}]".r) | curBrackets | brackets | quotedString
   ) <~ "\\s*\\}".r ^^ { _.filter(v => v.isInstanceOf[Task]).asInstanceOf[List[Task]] }
   private[parser] def className: Parser[Any] = _line("[ \\t\\(]".r) ~ opt(brackets) ~ "\\s*".r
@@ -159,13 +157,18 @@ class Parser extends RegexParsers {
       _line
   ) ^^ { _.filter(v => v.isInstanceOf[CodeTaskSuite]) }
 
+  /**
+    * This function is used to parse a CodeTask file.
+    * @param file Is the content of the file.
+    * @param noCodeTask Is used to filter out the code-tasks.
+    * @throws ParsingError
+    * @return List[CodeTaskSuite]
+    */
   def parse(file: String): List[CodeTaskSuite] = parseAll(fileParser, file) match {
     case Success(msg, _) => {
       val codeTaskSuites = msg.asInstanceOf[List[CodeTaskSuite]]
       codeTaskSuites.foreach(codeTaskSuite => {
-        codeTaskSuite.tasks.filter(k => k.isInstanceOf[Koan]).zipWithIndex.foreach{case (k: Koan, i) => {k.id = i+1}}
-        codeTaskSuite.tasks.filter(v => v.isInstanceOf[Video]).zipWithIndex.foreach{case (v: Video, i) => v.id = i+1}
-        codeTaskSuite.tasks.filter(c => c.isInstanceOf[CodeTask]).zipWithIndex.foreach{case (c: CodeTask, i) => c.id = i+1}
+        codeTaskSuite.tasks.zipWithIndex.foreach{case (k: Task, i) => {k.id = i+1}}
       })
       codeTaskSuites
     }
