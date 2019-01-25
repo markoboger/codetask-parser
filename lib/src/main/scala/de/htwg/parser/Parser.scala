@@ -66,7 +66,7 @@ class Parser extends RegexParsers {
       rep1(_line("(\"|\\s*==|\\s*===|\\seq\\s|\\s*\\.\\s*eq)".r) | quotedString) ~ (
         "\\s*===\\s*".r ~> compare(3) |
           "\\s*==\\s*".r ~> compare() |
-          "\\seq\\s*".r ~> gapEqual |
+          "\\seq\\s+".r ~> gapEqual |
           "\\s*\\.\\s*eq".r ~> equal
         ) ^^ { case before ~ after => (s"${before.mkString}${after._1}", after._2)}
       ))

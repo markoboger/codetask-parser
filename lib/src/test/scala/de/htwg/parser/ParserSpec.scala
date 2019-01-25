@@ -241,4 +241,69 @@ class ParserSpec extends WordSpec {
       assert(parsed.asInstanceOf[parser.NoSuccess].msg == "'\"' expected but ')' found")
     }
   }
+
+  // region Koan
+  // region Assert
+  "A boolean assert" should {
+    "be parsed" in {
+      val parsed = parser.assertBool.apply("true")
+      assert(parsed.successful)
+      assert(parsed.getOrElse(("", "")) == ("__", "true"))
+
+      val flaseParsed = parser.assertBool.apply("false")
+      assert(flaseParsed.successful)
+      assert(flaseParsed.getOrElse(("", "")) == ("__", "false"))
+    }
+    "not be parsed, if there is no boolean value" in {
+      val parsed = parser.assertBool.apply("")
+      assert(!parsed.successful)
+    }
+  }
+  "A compare assert" should {
+    "be parsed" in {
+      val parsed = parser.assert.apply("(\"Test\" == foo)")
+      assert(parsed.successful)
+      assert(parsed.getOrElse(("", "")) == ("\"Test\" == __", "foo"))
+
+      val tripleParsed = parser.assert.apply("(\"Test\" ===  foo)")
+      assert(tripleParsed.successful)
+      assert(tripleParsed.getOrElse(("", "")) == ("\"Test\" === __", "foo"))
+    }
+    "not be parsed if there is no input before comparison" in {
+      val parsed = parser.assert.apply("( == foo)")
+      assert(!parsed.successful)
+    }
+    "not be parsed if there is no input after comparison" in {
+      val parsed = parser.assert.apply("(\"Test\" == )")
+      assert(!parsed.successful)
+    }
+  }
+  "A gap equals assert" should {
+    "be parsed" in {
+      val parsed = parser.assert.apply("(\"Test\" eq foo)")
+      assert(parsed.successful)
+      assert(parsed.getOrElse(("", "")) == ("\"Test\" eq __", "foo"))
+    }
+    "not be parsed if there is no input before equals" in {
+      val parsed = parser.assert.apply("( eq foo)")
+      assert(!parsed.successful)
+    }
+    "not be parsed if there is no input after equals" in {
+      val parsed = parser.assert.apply("(\"Test\" eq )")
+      assert(!parsed.successful)
+    }
+  }
+  "An equals assert" should {
+    "be parsed" in {
+      val parsed = parser.assert.apply("(\"Test\".eq( foo))")
+      assert(parsed.successful)
+      assert(parsed.getOrElse(("", "")) == ("\"Test\".eq(__)", "foo"))
+    }
+    "not be parsed if there is no input before equals" in {
+      val parsed = parser.assert.apply("(.eq(foo))")
+      assert(!parsed.successful)
+    }
+  }
+  // endregion
+  // endregion
 }
