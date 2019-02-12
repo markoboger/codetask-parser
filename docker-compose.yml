@@ -7,8 +7,11 @@ services:
             - 9000:9000
         volumes:
                 - ./project:/project
+                - ../firebase_key.json:/root/firebase_key.json
         command: bash -c "tail -F /dev/null"
         working_dir: /project
+        environment:
+            - FIREBASE_CREDENTIALS=/root/firebase_key.json
     
     ngrok:
         image: alpine:latest
