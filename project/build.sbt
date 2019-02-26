@@ -11,8 +11,8 @@ libraryDependencies += guice
 libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
 
 libraryDependencies += ws
-// Adds additional packages into Twirl
-//TwirlKeys.templateImports += "de.htwg-konstanz.ar431ott.controllers._"
 
-// Adds additional packages into conf/routes
-// play.sbt.routes.RoutesKeys.routesImport += "de.htwg-konstanz.ar431ott.binders._"
+
+libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.1"
+
+libraryDependencies += "org.json4s" %% "json4s-jackson" % "3.6.3"

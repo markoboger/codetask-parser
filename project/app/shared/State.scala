@@ -8,7 +8,7 @@ case object Failure extends State
 case object Running extends State
 
 object State {
-  private var _state: State = Failure
+  private var _state: State = Success
   private var _error: Option[ParsingError] = None
 
   def state: State = this._state
