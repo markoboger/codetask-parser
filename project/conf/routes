@@ -13,3 +13,5 @@ GET       /status.png                 controllers.HomeController.status
 GET       /firebase                   controllers.HomeController.firebase
 
 POST      /github/:key                controllers.ParserController.github(key: String)
+
+GET       /users                      controllers.UserController.index
