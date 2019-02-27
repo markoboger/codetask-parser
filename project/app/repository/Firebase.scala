@@ -45,19 +45,30 @@ class Firebase @Inject() (config: Configuration, ws: WSClient) {
     this.courses(id)
   }
 
-  def createCourse(data:JsValue): Option[Int] = {
+  def updateCourse(course: Course): Unit = {
+    this.getCourses.find{case (id, currentCourse) => currentCourse.id == course.id} match {
+      case Some((id, _)) => this.setCourseData(id, course)
+      case None => {
+        this.createCourse(course)
+        this.courses = this.getAllCoursesRequest
+      }
+    }
+    Some("")
+  }
+
+  def createCourse(data:JsValue): Unit = {
     val request = this.createRequest(config.get[String]("firebase.tables.courses")).post(data)
     Await.result(request, Duration.Inf).status match {
-      case 200 => Some(200)
-      case _ => None
+      case 200 => ()
+      case _ => ()
     }
   }
 
-  def setCourseData(id: String, data: JsValue, attribute: List[String] = List.empty): Boolean = {
+  def setCourseData(id: String, data: JsValue, attribute: List[String] = List.empty): Unit = {
     val request = this.createRequest(config.get[String]("firebase.tables.courses"), List(id) ++ attribute).patch(data)
     Await.result(request, Duration.Inf).status match {
-      case 200 => true
-      case _ => false
+      case 200 => ()
+      case _ => ()
     }
   }
 

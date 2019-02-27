@@ -10,6 +10,7 @@ import play.api.libs.json.{JsArray, Json}
 
 @Singleton
 class Parser @Inject() (config: Configuration) {
+
   def parse(filesContent: Map[String, List[FileContent]]): Option[List[Course]] = {
     val parser = new CTParser()
     val parsedFiles = filesContent.map { case (folder, contents) => {

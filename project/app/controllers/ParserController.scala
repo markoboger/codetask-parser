@@ -30,7 +30,7 @@ class ParserController @Inject()(
           case None => None
         }
         parsedFiles <- parser.parse(filesContent)
-        fire <- if (parsedFiles.map(course => firebase.createCourse(course)).contains(None)) None else Some("")
+        fire <- if (parsedFiles.map(course => firebase.updateCourse(course)).contains(None)) None else Some("")
       } yield parsedFiles) match {
         case Some(fc) => Ok("")
         case None => BadRequest
