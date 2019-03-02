@@ -1,6 +1,72 @@
-import
-@(user: Map[String, User])
+@import models.tables.User
+@(key: String, users: Map[String, User])(implicit request: RequestHeader)
 
 @main("The last build failed!") {
+    <style>
+        table {
+            border: 2px solid rgb(51, 65, 82);
+        }
 
+        thead tr th {
+            background: rgb(51, 65, 82);
+            padding: 5px;
+            color: rgb(246, 246, 246);
+        }
+
+        tbody tr td {
+            padding: 5px;
+            border-left: 1px solid rgb(51, 65, 82);
+            border-bottom: 2px solid rgb(51, 65, 82);
+        }
+
+        tbody tr:nth-child(odd) td {
+            background: rgb(236, 236, 236);
+        }
+
+        button {
+            width: 150px;
+        }
+    </style>
+    <script>
+        function selectAll(el) {
+            let checkboxes = document.querySelectorAll("table tbody tr td input");
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = el.checked;
+            });
+        }
+
+        function sendChanges(action) {
+            let form = document.querySelector("form");
+            form.action = action;
+            form.submit();
+        }
+    </script>
+
+    <form method="post">
+        <table cellpadding="0" cellspacing="0">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" onclick="selectAll(this)" /></th>
+                    <th>Anzeigename</th>
+                    <th>E-Mail</th>
+                    <th>Punkte</th>
+                    <th>Role</th>
+                </tr>
+            </thead>
+            <tbody>
+            @for((id, user) <- users) {
+                <tr>
+                    <td><input type="checkbox" name="@id" /></td>
+                    <td>@user.displayName</td>
+                    <td>@user.email</td>
+                    <td align="center">@user.score</td>
+                    <td align="center">@user.role</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </form>
+    <br />
+    <button onclick="sendChanges('@routes.UserController.changeUsers(key, "n")')">Auf negativ setzen</button>
+    <button onclick="sendChanges('@routes.UserController.changeUsers(key, "p")')">Auf positiv setzen</button>
 }

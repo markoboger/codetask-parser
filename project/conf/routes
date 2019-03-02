@@ -14,4 +14,5 @@ GET       /firebase                   controllers.HomeController.firebase
 
 POST      /github/:key                controllers.ParserController.github(key: String)
 
-GET       /users                      controllers.UserController.index
+GET       /users/:key                 controllers.UserController.index(key: String)
+POST      /users/:key/:method         controllers.UserController.changeUsers(key: String, method: String)
