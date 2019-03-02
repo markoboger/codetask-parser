@@ -9,13 +9,13 @@ case object Running extends State
 
 object State {
   private var _state: State = Success
-  private var _error: Option[ParsingError] = None
+  private var _error: Option[Exception] = None
 
   def state: State = this._state
 
-  def error: Option[ParsingError] = this._error
+  def error: Option[Exception] = this._error
 
-  def failed(error: ParsingError) = {
+  def failed(error: Exception): Unit = {
     this._error = Some(error)
     this._state = Failure
   }

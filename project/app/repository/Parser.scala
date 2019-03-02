@@ -1,6 +1,7 @@
 package repository
 
 import de.htwg.parser.utils.CodeTaskSuite
+import de.htwg.parser.error.ParsingError
 import javax.inject.{Inject, Singleton}
 import de.htwg.parser.{Parser => CTParser}
 import models.tables.Course
@@ -11,7 +12,9 @@ import play.api.libs.json.{JsArray, Json}
 @Singleton
 class Parser @Inject() (config: Configuration) {
 
-  def parse(filesContent: Map[String, List[FileContent]]): Option[List[Course]] = {
+  @throws(classOf[IllegalStateException])
+  @throws(classOf[ParsingError])
+  def parse(filesContent: Map[String, List[FileContent]]): List[Course] = {
     val parser = new CTParser()
     val parsedFiles = filesContent.map { case (folder, contents) => {
       folder -> contents.map(content => content match {
@@ -30,7 +33,7 @@ class Parser @Inject() (config: Configuration) {
       } yield (meta.asInstanceOf[Meta], content))
     }}
 
-    val coursesParsed = courses.map {
+    courses.map {
       case (_, Some(course)) => Course(
         course._1.id,
         course._1.title,
@@ -39,9 +42,5 @@ class Parser @Inject() (config: Configuration) {
       )
       case (folder, _) => throw new IllegalStateException(s"Meta or content in folder '${folder}' not found!")
     }.toList
-
-    println(coursesParsed)
-
-    Some(coursesParsed)
   }
 }
