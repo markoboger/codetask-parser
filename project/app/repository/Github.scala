@@ -3,7 +3,8 @@ package repository
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.libs.json._
-import java.util.Base64
+import java.util.{Base64, NoSuchElementException}
+import java.util.concurrent.TimeoutException
 
 import models.tests.{FileContent, Meta, TestFile}
 import play.api.libs.ws.WSClient
@@ -14,13 +15,15 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 @Singleton
 class Github @Inject() (config: Configuration, ws: WSClient) {
-  def push(value: JsValue): Option[Map[String, List[FileContent]]] = {
+  @throws(classOf[TimeoutException])
+  @throws(classOf[NoSuchElementException])
+  def push(value: JsValue): Map[String, List[FileContent]] = {
     if ((value \ "ref").isDefined && (value \ "ref").get.as[String] == config.get[String]("github.branch")) {
-      val added = value \ "head_commit" \ "added"
-      val modified = value \ "head_commit" \ "modified"
-      val removed = value \ "head_commit" \ "removed"
-      val repositoryName = value \ "repository" \ "full_name"
-      if (added.isDefined && modified.isDefined && removed.isDefined && repositoryName.isDefined) {
+      try {
+        val added = value \ "head_commit" \ "added"
+        val modified = value \ "head_commit" \ "modified"
+        val removed = value \ "head_commit" \ "removed"
+        val repositoryName = value \ "repository" \ "full_name"
         val folderFiles = this.getFolderFiles(
           repositoryName.get.as[String],
           (added.get.as[JsArray] ++ modified.get.as[JsArray] ++ removed.get.as[JsArray])
@@ -30,16 +33,17 @@ class Github @Inject() (config: Configuration, ws: WSClient) {
             .distinct
             .toList
         )
-        Some(this.getFilesContent(folderFiles))
-      } else {
-        throw new NoSuchElementException("File paths or repository name not found!")
+        this.getFilesContent(folderFiles)
+      } catch {
+        case _: NoSuchElementException => throw new NoSuchElementException("File paths or repository name not found!")
       }
     }
     else {
-      None
+      Map.empty
     }
   }
 
+  @throws(classOf[TimeoutException])
   private def getFolderFiles(repositoryName: String, folders: List[String]):
   Map[String, List[Option[(JsValue, JsValue)]]] = {
     val repository = config.get[String]("github.repository").replace("{repositoryName}", repositoryName)
@@ -48,8 +52,9 @@ class Github @Inject() (config: Configuration, ws: WSClient) {
       val request = ws.url(s"${repository}${f}")
         .addHttpHeaders("Accept" -> "application/json")
         .withRequestTimeout(config.get[Int]("github.timeout").millis)
+
       val response: Future[JsArray] = request.get().map { _.json.as[JsArray] }
-      f -> Await.result(response, Duration.Inf).value
+      f -> Await.result(response, config.get[Int]("github.timeout").millis).value
         .filter(content => (content \ "type").toOption match {
           case Some(t) => t.as[String] == "file"
           case None => throw new NoSuchElementException("File type not found!")
@@ -59,9 +64,12 @@ class Github @Inject() (config: Configuration, ws: WSClient) {
           url <- (content \ "url").toOption
         } yield (name, url))
         .toList
+
     }).toMap
   }
 
+  @throws(classOf[TimeoutException])
+  @throws(classOf[NoSuchElementException])
   private def getFilesContent(folderFiles: Map[String, List[Option[(JsValue, JsValue)]]]): Map[String, List[FileContent]] = {
     folderFiles.map{ case (folder, files) => {
       folder -> files.map {
@@ -70,7 +78,7 @@ class Github @Inject() (config: Configuration, ws: WSClient) {
             .addHttpHeaders("Accept" -> "application/json")
             .withRequestTimeout(config.get[Int]("github.timeout").millis)
           val response: Future[JsValue] = request.get().map{ _.json }
-          (Await.result(response, Duration.Inf) \ "content").toOption match {
+          (Await.result(response, config.get[Int]("github.timeout").millis) \ "content").toOption match {
             case Some(content) => {
               val file = new String(Base64.getDecoder.decode(content.as[String].replaceAll("\n", "")))
               if (fileName.as[String] == config.get[String]("github.meta")) {
@@ -82,13 +90,13 @@ class Github @Inject() (config: Configuration, ws: WSClient) {
                 } yield (id.as[Int], title.as[String], description.as[String])
                 meta match {
                   case Some((id, title, description)) => Meta(id, title, description)
-                  case None => throw new IllegalAccessException("Meta could not be parsed!")
+                  case None => throw new NoSuchElementException("Meta could not be parsed!")
                 }
               } else {
                 TestFile(file)
               }
             }
-            case None => throw new NoSuchFieldException("File has no content!")
+            case None => throw new NoSuchElementException("File has no content!")
           }
         }
         case None => throw new NoSuchElementException(s"File name or url could not be parsed!")

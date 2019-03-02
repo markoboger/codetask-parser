@@ -22,10 +22,7 @@ class ParserController @Inject()(
       (for {
         filesContent <- request.body.asJson match {
           case Some(value) => {
-            git.push(value) match {
-              case Some(fc) => Some(fc)
-              case None => None
-            }
+            Some(git.push(value))
           }
           case None => None
         }

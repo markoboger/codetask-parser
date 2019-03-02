@@ -22,7 +22,6 @@ class Firebase @Inject() (config: Configuration, ws: WSClient) {
     .addHttpHeaders("Accept" -> "application/json")
     .withRequestTimeout(config.get[Int]("firebase.timeout").millis)
 
-
   @throws(classOf[TimeoutException])
   @throws(classOf[IllegalAccessException])
   @throws(classOf[NoSuchElementException])
