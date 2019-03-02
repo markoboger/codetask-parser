@@ -17,7 +17,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class Github @Inject() (config: Configuration, ws: WSClient) {
   @throws(classOf[TimeoutException])
   @throws(classOf[NoSuchElementException])
-  def push(value: JsValue): Map[String, List[FileContent]] = {
+  def push(value: JsValue): Map[String, List[(String, FileContent)]] = {
     if ((value \ "ref").isDefined && (value \ "ref").get.as[String] == config.get[String]("github.branch")) {
       try {
         val added = value \ "head_commit" \ "added"
@@ -70,7 +70,8 @@ class Github @Inject() (config: Configuration, ws: WSClient) {
 
   @throws(classOf[TimeoutException])
   @throws(classOf[NoSuchElementException])
-  private def getFilesContent(folderFiles: Map[String, List[Option[(JsValue, JsValue)]]]): Map[String, List[FileContent]] = {
+  private def getFilesContent(folderFiles: Map[String, List[Option[(JsValue, JsValue)]]]):
+    Map[String, List[(String, FileContent)]] = {
     folderFiles.map{ case (folder, files) => {
       folder -> files.map {
         case Some((fileName, fileUrl)) => {
@@ -89,11 +90,11 @@ class Github @Inject() (config: Configuration, ws: WSClient) {
                   description <- (jsonFile \ "description").toOption
                 } yield (id.as[Int], title.as[String], description.as[String])
                 meta match {
-                  case Some((id, title, description)) => Meta(id, title, description)
+                  case Some((id, title, description)) => (fileName.as[String], Meta(id, title, description))
                   case None => throw new NoSuchElementException("Meta could not be parsed!")
                 }
               } else {
-                TestFile(file)
+                (fileName.as[String], TestFile(file))
               }
             }
             case None => throw new NoSuchElementException("File has no content!")

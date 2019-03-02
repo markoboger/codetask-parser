@@ -1,5 +1,39 @@
-@()
+@import de.htwg.parser.error.ParsingError
+@(error: Option[Exception], currentFile: Option[String])
 
 @main("The last build failed!", "failed_icon.png") {
-
+    @if(error.isDefined) {
+        <style>
+            #content{
+                background: #f55;
+            }
+            #icon {
+                color: #fff;
+                display: inline-block;
+                width: 50px;
+                height: 50px;
+                text-align: center;
+                font-size: 30px;
+            }
+            #message {
+                color: #fff;
+                font-size: 30px;
+                display: inline-block;
+            }
+        </style>
+        @error.get match {
+            case err: ParsingError => {
+                <div id="content">
+                    <div id="icon"><p>!</p></div>
+                    <p id="message">@currentFile: @err.getMessage()</p>
+                </div>
+            }
+            case err: Exception => {
+                <div id="content">
+                    <div id="icon"><p>!</p></div>
+                    <p id="message">@err.getMessage()</p>
+                </div>
+            }
+        }
+    }
 }

@@ -8,17 +8,25 @@ import models.tables.Course
 import models.tests.{FileContent, Meta, TestFile}
 import play.api.Configuration
 import play.api.libs.json.{JsArray, Json}
+import shared.State
 
 @Singleton
 class Parser @Inject() (config: Configuration) {
 
   @throws(classOf[IllegalStateException])
   @throws(classOf[ParsingError])
-  def parse(filesContent: Map[String, List[FileContent]]): List[Course] = {
+  def parse(filesContent: Map[String, List[(String, FileContent)]]): List[Course] = {
     val parser = new CTParser()
     val parsedFiles = filesContent.map { case (folder, contents) => {
-      folder -> contents.map(content => content match {
-        case TestFile(file) => parser.parse(file)
+      folder -> contents.map(content => content._2 match {
+        case TestFile(file) => try {
+          parser.parse(file)
+        } catch {
+          case err: ParsingError =>  {
+            State.currentFile(s"${folder}/${content._1}")
+            throw err
+          }
+        }
         case meta: Meta => meta
       })
     }}

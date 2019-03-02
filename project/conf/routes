@@ -9,9 +9,6 @@ GET       /                           controllers.HomeController.index
 
 GET       /status.png                 controllers.HomeController.status
 
-# TODO: remove
-GET       /firebase                   controllers.HomeController.firebase
-
 POST      /github/:key                controllers.ParserController.github(key: String)
 
 GET       /users/:key                 controllers.UserController.index(key: String)

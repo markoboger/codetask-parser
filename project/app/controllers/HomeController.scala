@@ -31,7 +31,7 @@ class HomeController @Inject()(cc: ControllerComponents, ws: WSClient, firebaseO
   def index() = Action { implicit request: Request[AnyContent] =>
     State.state match {
       case Success => Ok(views.html.succeed())
-      case Failure => Ok(views.html.failed())
+      case Failure => Ok(views.html.failed(State.error, State.getCurrentFile))
       case Running => Ok(views.html.runnig())
     }
   }
@@ -43,27 +43,4 @@ class HomeController @Inject()(cc: ControllerComponents, ws: WSClient, firebaseO
       case Running => statusResult(StatusImages.RUNNING)
     }
   }
-
-  def firebase() = Action { implicit request: Request[AnyContent] => {
-    import play.api.libs.json._
-    import scala.concurrent.duration._
-    import models.tables.Course
-
-    //println(firebaseO.getCourses)
-    //println(firebaseO.getUsers)
-    //println(firebaseO.getUser("-L6i5HMG60EiVuOntjXK"))
-    //println(firebaseO.getCourse("-L6Nj4WIYnQprOe8dY9c"))
-    //firebaseO.setUserData("-L6i5HMG60EiVuOntjXK", Json.obj("autoNext" -> true), List("settings"))
-    //firebaseO.setCourseData("-L6Nj4WIYnQprOe8dY9c", Json.obj("id" -> 1))
-    /*firebaseO.createCourse(Course(
-      2,
-      "Foo",
-      "Foo",
-      Json.arr()
-    ).toJson)*/
-
-    println(JsString("").isInstanceOf[JsValue])
-
-    Ok("firebase")
-  }}
 }
