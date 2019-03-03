@@ -9,6 +9,15 @@ import de.htwg.parser.error.ParsingError
 
 
 class Parser(val skipCodeTask: Boolean = true) extends RegexParsers {
+  private[parser] def trimLine(text: String): String = text
+    .replaceAll("^\\s+", "")
+    .replaceAll("\\s+$", "")
+    .replaceAll("^(\\\\n)+", "")
+    .replaceAll("(\\\\n)+$", "")
+    .replaceAll("^(\\n)+", "")
+    .replaceAll("(\\n)+$", "")
+    .replaceAll("^\\s+", "")
+    .replaceAll("\\s+$", "")
   override val skipWhitespace = false
   implicit def textToInput(text: String): Input = new CharArrayReader(text.toCharArray, 0).asInstanceOf[Input]
 
@@ -17,7 +26,7 @@ class Parser(val skipCodeTask: Boolean = true) extends RegexParsers {
 
   private[parser] def _line: Parser[String] = this._line(_EOF)
   private[parser] def _lineUntilAppearance(until: Regex): Parser[String] = s"[^\\n\\r]+?(?=${until.regex})".r ^^
-    { _.replaceAll("^\\s+", "") }
+    { _.replaceAll("^\\s+", " ") }
   private[parser] def _line(until: Regex): Parser[String] = not(this._EOF) ~> (
     not(until) ~> guard(s"[^\\n\\r]+${until.regex}".r) ~> _lineUntilAppearance(until) |
       not(until) ~> "[^\\n\\r]*".r ~ opt("[\\n\\r]".r) ^^ {
@@ -45,13 +54,13 @@ class Parser(val skipCodeTask: Boolean = true) extends RegexParsers {
   private[parser] def comment: Parser[String] = "[ \\t]*\\/\\/[^\\r\\n]*".r
 
   // region Brackets ()/{}
-  def curBracketsContent: Parser[String] =
+  private[parser] def curBracketsContent: Parser[String] =
     rep(comment | _line("[\\{\\(\"\\}]".r) | curBrackets | brackets | quotedString) ^^ ( _.mkString )
-  def curBrackets: Parser[String] = "{" ~> curBracketsContent <~ "}" ^^ { v => s"{${v}}" }
+  private[parser] def curBrackets: Parser[String] = "{" ~> curBracketsContent <~ "}" ^^ { v => s"{${v}}" }
 
-  def bracketsContent: Parser[String] =
+  private[parser] def bracketsContent: Parser[String] =
     rep(comment | _line("[\\{\\(\"\\)]".r) | curBrackets | brackets | quotedString) ^^ ( _.mkString )
-  def brackets: Parser[String] = "(" ~> bracketsContent <~ ")" ^^ { v => s"(${v})" }
+  private[parser] def brackets: Parser[String] = "(" ~> bracketsContent <~ ")" ^^ { v => s"(${v})" }
   // endregion
 
   // description combining strings with a + sign
@@ -102,13 +111,13 @@ class Parser(val skipCodeTask: Boolean = true) extends RegexParsers {
   }}
   private[parser] def koanBody: Parser[(String, List[String])] = "\\s*\\{".r ~> koanTasks <~ "}"
   private[parser] def koan: Parser[Koan] = description ~ koanBody ^^ {
-    case desc ~ body => Koan(KoanData(desc, body._1, body._2))
+    case desc ~ body => Koan(KoanData(desc, this.trimLine(body._1), body._2))
   }
   //endregion
 
   //region Video
   private[parser] def videoBody: Parser[(String, String)] = (string <~ "\\s*,\\s*".r) ~ string ^^ { case desc ~ url => (desc, url) }
-  def video: Parser[Video] = "\\s*\\(\\s*".r ~> videoBody <~ "\\s*\\)".r ^^ {v => Video(VideoData(v._1, v._2))}
+  private[parser] def video: Parser[Video] = "\\s*\\(\\s*".r ~> videoBody <~ "\\s*\\)".r ^^ {v => Video(VideoData(v._1, v._2))}
   //endregion
 
   //region Codetask
