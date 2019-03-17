@@ -350,7 +350,7 @@ class ParserSpec extends WordSpec {
           |assert("Foo" == __)
           |assert("Foo" === __)
           |assert("Foo" eq __)
-          |assert("Foo".eq(__))
+          | assert("Foo".eq(__))
           |Foo should be(__)
           |case class Foo extends Bar("foo")
           |""".stripMargin, List("true", "false", "Bar", "\"Bar\"", "Bar", "Bar", "\"Bar\"")))
