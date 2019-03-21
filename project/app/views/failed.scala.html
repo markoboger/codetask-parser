@@ -31,7 +31,11 @@
             case err: Exception => {
                 <div id="content">
                     <div id="icon"><p>!</p></div>
-                    <p id="message">@err.getMessage()</p>
+                    @if(currentFile.isDefined) {
+                        <p id="message">@currentFile: @err.getMessage()</p>
+                    } else {
+                        <p id="message">@err.getMessage()</p>
+                    }
                 </div>
             }
         }

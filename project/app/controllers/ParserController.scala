@@ -37,7 +37,7 @@ class ParserController @Inject()(
         Ok("")
       } catch {
         case err: Exception => {
-          State.failed(err)
+          State.failed(new IllegalAccessException(s"${err.getMessage}\n${err.getStackTrace.deep.mkString("\n")}"))
           BadRequest
         }
       }

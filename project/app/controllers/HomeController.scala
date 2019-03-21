@@ -9,14 +9,13 @@ import models.StatusImages
 import play.api.libs.ws._
 
 import scala.collection.immutable._
-import repository.Firebase
 
 /**
  * This controller creates an `Action` to handle HTTP requests to the
  * application's home page.
  */
 @Singleton
-class HomeController @Inject()(cc: ControllerComponents, ws: WSClient, firebaseO: Firebase) extends AbstractController(cc) {
+class HomeController @Inject()(cc: ControllerComponents, ws: WSClient) extends AbstractController(cc) {
   def statusResult(image: Array[Byte]): Result = Result(
     header = ResponseHeader(200, Map.empty),
     body = HttpEntity.Strict(ByteString.fromArray(image), Some("image/png"))

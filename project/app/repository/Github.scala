@@ -1,6 +1,7 @@
 package repository
 
 import javax.inject.{Inject, Singleton}
+import java.net.URI
 import play.api.Configuration
 import play.api.libs.json._
 import java.util.{Base64, NoSuchElementException}
@@ -15,6 +16,15 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 @Singleton
 class Github @Inject() (config: Configuration, ws: WSClient) {
+  private def buildUrl(url: String) = {
+    if (!config.get[String]("github.clientId").isEmpty && !config.get[String]("github.clientSecret").isEmpty){
+      val query = if ((new URI(url)).getQuery == null) "?" else "&"
+      s"${url}${query}client_id=${config.get[String]("github.clientId")}&client_secret=${config.get[String]("github.clientSecret")}"
+    } else {
+      url
+    }
+  }
+
   @throws(classOf[TimeoutException])
   @throws(classOf[NoSuchElementException])
   def push(value: JsValue): Map[String, List[(String, FileContent)]] = {
@@ -35,7 +45,8 @@ class Github @Inject() (config: Configuration, ws: WSClient) {
         )
         this.getFilesContent(folderFiles)
       } catch {
-        case _: NoSuchElementException => throw new NoSuchElementException("File paths or repository name not found!")
+        case err: JsResultException =>
+          throw new NoSuchElementException(s"${err.errors.toArray.deep.mkString("\n")}\n\n${value}")
       }
     }
     else {
@@ -49,7 +60,7 @@ class Github @Inject() (config: Configuration, ws: WSClient) {
     val repository = config.get[String]("github.repository").replace("{repositoryName}", repositoryName)
 
     folders.map(f => {
-      val request = ws.url(s"${repository}${f}")
+      val request = ws.url(this.buildUrl(s"${repository}${f}"))
         .addHttpHeaders("Accept" -> "application/json")
         .withRequestTimeout(config.get[Int]("github.timeout").millis)
 
@@ -64,7 +75,6 @@ class Github @Inject() (config: Configuration, ws: WSClient) {
           url <- (content \ "url").toOption
         } yield (name, url))
         .toList
-
     }).toMap
   }
 
@@ -75,7 +85,7 @@ class Github @Inject() (config: Configuration, ws: WSClient) {
     folderFiles.map{ case (folder, files) => {
       folder -> files.map {
         case Some((fileName, fileUrl)) => {
-          val request = ws.url(fileUrl.as[String])
+          val request = ws.url(this.buildUrl(fileUrl.as[String]))
             .addHttpHeaders("Accept" -> "application/json")
             .withRequestTimeout(config.get[Int]("github.timeout").millis)
           val response: Future[JsValue] = request.get().map{ _.json }
@@ -88,7 +98,7 @@ class Github @Inject() (config: Configuration, ws: WSClient) {
                   id <- (jsonFile \ "id").toOption
                   title <- (jsonFile \ "title").toOption
                   description <- (jsonFile \ "description").toOption
-                } yield (id.as[Int], title.as[String], description.as[String])
+                } yield (id.as[Long], title.as[String], description.as[String])
                 meta match {
                   case Some((id, title, description)) => (fileName.as[String], Meta(id, title, description))
                   case None => throw new NoSuchElementException("Meta could not be parsed!")

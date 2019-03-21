@@ -1,5 +1,4 @@
 package shared
-import de.htwg.parser.error.ParsingError
 
 sealed trait State
 
@@ -16,7 +15,12 @@ object State {
 
   def error: Option[Exception] = this._error
 
-  def currentFile(file: String) = this._file = Some(file)
+  def currentFile(file: String) = {
+    if (file.trim.length >= 0)
+      this._file = Some(file)
+    else
+      this._file = None
+  }
   def getCurrentFile: Option[String] = this._file
 
   def failed(error: Exception): Unit = {

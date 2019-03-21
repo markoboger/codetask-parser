@@ -32,15 +32,19 @@ class Firebase @Inject() (config: Configuration, ws: WSClient) {
       throw new IllegalAccessException(s"Could not get all users! (Status code is not 200)")
     }
     val valuesMap: scala.collection.mutable.Map[String, Course] = new scala.collection.mutable.HashMap[String, Course]
-    try {
-      response.json.as[JsObject].keys.foreach(key => {
-        valuesMap += (key -> (response.json \ key).get)
-      })
-    } catch {
-      case _: NoSuchElementException =>
-        throw new NoSuchElementException("Could not get all courses! (Could not parse the answer!)")
+    if (response.body.equals("null")) {
+      Map.empty
+    } else {
+      try {
+        response.json.as[JsObject].keys.foreach(key => {
+          valuesMap += (key -> (response.json \ key).get)
+        })
+      } catch {
+        case _: NoSuchElementException =>
+          throw new NoSuchElementException("Could not get all courses! (Could not parse the answer!)")
+      }
+      valuesMap.toMap
     }
-    valuesMap.toMap
   }
 
 
